@@ -70,14 +70,14 @@ def move_window(event):
 #! VERİ GÜNCELLEME
 
 def update_loc():
-    global lat, lon
+    global lat, lon, heading
     while True:
         try:
             loc = vehicle.location.global_frame
             lat = loc.lat
             lon = loc.lon
             alt = loc.alt
-
+            heading = vehicle.heading
             print(f"Konum: Enlem={lat}, Boylam={lon}, İrtifa={alt}")
             time.sleep(1)  # Her saniyede bir güncelle
         except Exception as e:
@@ -587,15 +587,6 @@ marker = map_widget.set_marker(
 rotated_img = plane_img.rotate(-yaw, expand=True)
 marker_img = ImageTk.PhotoImage(rotated_img)
 
-# Eski marker'ı sil
-marker.delete()
-
-# Yeni marker oluştur
-marker = map_widget.set_marker(
-    lat, lon,
-    text="Vehicle",
-    icon=marker_img
-)
 
 # Haritayı marker ile merkezle
 map_widget.set_position(lat, lon)
@@ -604,28 +595,30 @@ def gui_update_map():
     global marker, marker_img, lat, lon, yaw, plane_img
 
     try:
-        # Önce değerlerin tanımlı olup olmadığını kontrol et
+        marker.delete()
+
+        marker = map_widget.set_marker(
+            lat, lon,
+            text="Vehicle",
+            icon=marker_img
+)
+
+
         if 'lat' in globals() and 'lon' in globals() and 'yaw' in globals():
             
-            # Marker ikonunu yaw'a göre döndür
+
             rotated_img = plane_img.rotate(-yaw, expand=True)
-            marker_img = ImageTk.PhotoImage(rotated_img, master=maploop)  # master çok önemli
+            marker_img = ImageTk.PhotoImage(rotated_img, master=maploop)  
             
-            # Marker ikonunu güncelle
-            marker.set_icon(marker_img)
-            
-            # Marker konumunu güncelle
+
             marker.set_position(lat, lon)
-            
-            # Haritayı marker ile merkezle
-            map_widget.set_position(lat, lon)
 
     except Exception as e:
         print("Map update error:", e)
 
-    maploop.after(500, gui_update_map)  # 0.5 saniyede bir tekrar
+    maploop.after(200, gui_update_map)
 
-
+gui_update_map()
 
 
 root.mainloop()
