@@ -10,6 +10,7 @@ import numpy as np
 import pygame
 from tkintermapview import TkinterMapView
 from PIL import Image, ImageTk
+from tkinter import messagebox
 
 sample_rate = 44100
 duration = 0.1  # saniye
@@ -41,6 +42,7 @@ def play_vario_sound():
 
 #! ARAÇ BAĞLANTISI
 #vehicle = connect('COM6', baud=57600, wait_ready=True, timeout=120, heartbeat_timeout=120)
+
 vehicle = connect_vehicle('tcp:127.0.0.1:5762', baud=115200, wait_ready=True, timeout=120, heartbeat_timeout=120)
 vehicletype = vehicle._vehicle_type
 if vehicletype == 1:
@@ -51,7 +53,7 @@ elif vehicletype == 10:
     plane_img = Image.open('images/rover.png')
 
 
-#vehicle = connect('tcp:127.0.0.1:5762', baud=115200, wait_ready=True, timeout=120, heartbeat_timeout=120)
+
 
 #! PENCERE BAŞLATMA
 root = tk.Tk()
@@ -60,6 +62,9 @@ root.overrideredirect(True)
 root.geometry("800x600")
 root.attributes('-topmost', True)
 marker_img = ImageTk.PhotoImage(plane_img)
+
+
+
 #! MODLAR
 modes = ['AUTO', 'MANUAL', 'STABILIZE', 'LOITER', 'CIRCLE', 'FBWA', 'FBWB','RTL', 'GUIDED', 'LAND', 'TAKEOFF', 'GUIDED']
 
