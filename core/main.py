@@ -61,7 +61,7 @@ root.geometry("800x600")
 root.attributes('-topmost', True)
 marker_img = ImageTk.PhotoImage(plane_img)
 #! MODLAR
-modes = ['AUTO', 'MANUAL', 'STABILIZE', 'LOITER', 'CIRCLE', 'FBWA', 'RTL', 'GUIDED']
+modes = ['AUTO', 'MANUAL', 'STABILIZE', 'LOITER', 'CIRCLE', 'FBWA', 'FBWB','RTL', 'GUIDED', 'LAND', 'TAKEOFF', 'GUIDED']
 
 def move_window(event):
     root.geometry(f'+{event.x_root}+{event.y_root}')
@@ -513,7 +513,7 @@ def draw_hud_crosshair(roll_angle_deg):
     hud_base.create_line(p0, p2, fill="red", width=3, tags="crosshair")
     hud_base.create_oval(cx-10, cy-10, cx+10, cy+10, width=2, outline="red", tags="crosshair")
 
-armed_status_label = tk.Label(root, text="ARMED?", fg="red", font="Helvetica 14")
+armed_status_label = tk.Label(root, text="ARMED", fg="red", font="Helvetica 14")
 armed_status_label.place(x=180, y=100)
 #! HUD ALT
 hud_base.create_text(30, 30, text="ALT", fill="red", font="Helvetica 16")
@@ -529,6 +529,13 @@ modes_dropbox = ttk.Combobox(root, values=modes, font='Helvetica 12')
 modes_dropbox.set(str(vehicle.mode.name))
 modes_dropbox.place(x=10, y=380)
 
+#! ACİL DURUM RTL BUTONU
+def emergency_rtl():
+    change_mode('RTL')
+
+emergency_rtl_button_image = tk.PhotoImage(file="images/pad.png")
+emergency_rtl_button = tk.Button(image=emergency_rtl_button_image, command=emergency_rtl, bg='red')
+emergency_rtl_button.place(x=180,y=450)
 
 #! MOD DEĞİŞİM UYGULAMA
 def apply_mode():
