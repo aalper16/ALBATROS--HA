@@ -41,9 +41,32 @@ def play_vario_sound():
         sound.stop()    # her buffer sonunda durdur ve yenisini çal
 
 #! ARAÇ BAĞLANTISI
+
+
 #vehicle = connect('COM6', baud=57600, wait_ready=True, timeout=120, heartbeat_timeout=120)
 
 vehicle = connect_vehicle('tcp:127.0.0.1:5762', baud=115200, wait_ready=True, timeout=120, heartbeat_timeout=120)
+# Prearm ve genel uyarıları yakalama
+def statustext_listener(self, name, message):
+    text = message.text
+    severity = message.severity
+
+    # "PreArm" içeren uyarılar
+    if "PreArm" in text or "prearm" in text:
+        print(f"[PREARM UYARISI] {text}")
+        prearm_label.after(0, lambda: prearm_label.config(text=text, fg="red"))
+    elif "Arm" in text or "arming" in text:
+        # Silahlanma ile ilgili diğer mesajlar
+        prearm_label.after(0, lambda: prearm_label.config(text=text, fg="orange"))
+        prearm_label.after(8000, lambda: prearm_label.config(text=""))
+
+    else:
+        # PreArm dışı genel sistem mesajlarını da görmek istersen aktif edebilirsin:
+        # print(f"[{severity}] {text}")
+        pass
+
+vehicle.add_message_listener('STATUSTEXT', statustext_listener)
+
 vehicletype = vehicle._vehicle_type
 if vehicletype == 1:
     plane_img = Image.open('images/plane.png')
@@ -420,7 +443,7 @@ battery_title = tk.Label(text=battery_data, bg="#2e2e2e", font="Helvetica 16", f
 battery_title.place(x=500, y=210)
 
 prearm_label = tk.Label(text="", bg="#2e2e2e", fg='red', font="Helvetica 12")
-prearm_label.place(x=500, y=240)
+prearm_label.place(x=10, y=550)
 
 rc_roll_label = tk.Label(root, text="Roll (CH1):", bg="#2e2e2e", fg="white", font="Helvetica 12")
 rc_roll_label.place(x=500, y=270)
