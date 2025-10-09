@@ -1,4 +1,4 @@
-from dronekit import connect, VehicleMode
+from dronekit import connect, VehicleMode, LocationGlobalRelative, LocationGlobal
 import tkinter as tk
 from tkinter import ttk
 import time
@@ -46,6 +46,20 @@ def play_vario_sound():
 #vehicle = connect('COM6', baud=57600, wait_ready=True, timeout=120, heartbeat_timeout=120)
 
 vehicle = connect_vehicle('tcp:127.0.0.1:5762', baud=115200, wait_ready=True, timeout=120, heartbeat_timeout=120)
+counter_home = 0
+while vehicle.home_location is None:
+    print('Home konumu bekleniyor...', vehicle.home_location)
+    time.sleep(1)
+    counter_home +=1
+    if vehicle.home_location is None and counter_home == 3:
+        with open('data/home_lat.txt', "r") as homefile_lat:
+            homepoint_lat = homefile_lat.read()
+        with open('data/home_lon.txt', "r") as homefile_lon:
+            homepoint_lon = homefile_lon.read()
+        with open('data/home_alt.txt', "r") as homefile_alt:
+            homepoint_alt = homefile_alt.read()
+        newhome = LocationGlobal(float(homepoint_lat), float(homepoint_lon), float(homepoint_alt))
+        vehicle.home_location = newhome
 # Prearm ve genel uyarıları yakalama
 def statustext_listener(self, name, message):
     text = message.text
@@ -89,14 +103,55 @@ marker_img = ImageTk.PhotoImage(plane_img)
 
 
 #! MODLAR
-modes = ['AUTO', 'MANUAL', 'STABILIZE', 'LOITER', 'CIRCLE', 'FBWA', 'FBWB','RTL', 'GUIDED', 'LAND', 'TAKEOFF', 'GUIDED']
+modes = ['AUTO', 'MANUAL', 'STABILIZE', 'LOITER', 'CIRCLE', 'FBWA', 'FBWB','RTL', 'GUIDED', 'LAND', 'TAKEOFF', 'AUTOLAND']
 
 def move_window(event):
     root.geometry(f'+{event.x_root}+{event.y_root}')
 
 
-#! VERİ GÜNCELLEME
 
+#! FONKSİYONLAR
+def change_alt(alt):
+    current_location = vehicle.location.global_relative_frame
+    vmode = vehicle.mode.name
+    if vmode == 'GUIDED':
+        target_alt = LocationGlobalRelative(current_location.lat, current_location.lon, alt)
+        vehicle.simple_goto(target_alt)
+        print(f'Yükseklik {str(alt)} olarak ayarlanıyor...')
+    else:
+        print('GUIDED mod olmadan yükseklik manuel bir şekilde değiştirilemez!')
+
+def change_airspeed(speed):
+    vehicle.airspeed = int(speed)
+
+def only_int(char):
+    # Girilen karakter sayı mı?
+    return char.isdigit() or char == ""
+vcmd = (root.register(only_int), "%S")
+
+def arm_vehicle():
+    if vehicle.armed == False:
+        vehicle.armed = True
+    elif vehicle.armed == True:
+        vehicle.armed = False
+
+def emergency_rtl():
+    change_mode('RTL')
+
+#! VERİ GÜNCELLEME
+def update_homefiles():
+    get_home_lat = vehicle.home_location.lat
+    get_home_lon = vehicle.home_location.lon
+    get_home_alt = vehicle.home_location.alt
+
+    with open ('data/home_alt.txt', 'w') as updhome_alt:
+        updhome_alt.write(str(get_home_alt))
+    with open ('data/home_lat.txt', 'w') as updhome_lat:
+        updhome_lat.write(str(get_home_lat))
+    with open ('data/home_lon.txt', 'w') as updhome_lon:
+        updhome_lon.write(str(get_home_lon))
+    
+    time.sleep(3)
 def update_loc():
     global lat, lon, heading
     while True:
@@ -200,12 +255,17 @@ def update_groundspeed():
     global groundspeed_data 
     while True:
         try:
-            groundspeed_data = vehicle.groundspeed
-            groundspeed_title.config(text=f"{groundspeed_data}kts")
+            groundspeed_data = vehicle.groundspeed  # m/s
+            groundspeed_kmh = groundspeed_data * 3.6  # m/s → km/h
+
+            groundspeed_title.config(
+                text=f"{groundspeed_data:.2f} m/s | {groundspeed_kmh:.1f} km/h"
+            )
         except Exception as e:
-            print(f'HATA!:',e)
+            print(f'HATA!:', e)
 
         time.sleep(0.5)
+
 
 def update_attitude():
     global attitude, roll, pitch, yaw
@@ -373,6 +433,9 @@ def update_rc_channels():
 
 
 #! THREAD BAŞLATMA
+homefiles_update_thread = threading.Thread(target=update_homefiles, daemon=True)
+homefiles_update_thread.start()
+
 arm_thread = threading.Thread(target=update_arm, daemon=True)
 arm_thread.start()
 
@@ -421,6 +484,7 @@ content = tk.Frame(root, bg='#2e2e2e')
 content.pack(expand=True, fill=tk.BOTH)
 
 #! PARAMETRELER
+
 altitude_title = tk.Label(text=f"ALT: {altitude}", bg="#2e2e2e", fg='white', font="Helvetica 16")
 altitude_title.place(x=500,y=30)
 
@@ -553,13 +617,11 @@ hud_base.create_text(430, 30, text="SPEED", fill="red", font="Helvetica 16")
 # MOD DEĞİŞTİRME
 modes_title = tk.Label(text='Select Mode', bg='#2e2e2e', fg='white')
 modes_title.place(x=10, y=360)
-modes_dropbox = ttk.Combobox(root, values=modes, font='Helvetica 12')
+modes_dropbox = ttk.Combobox(root, values=modes, font='Helvetica 22')
 modes_dropbox.set(str(vehicle.mode.name))
 modes_dropbox.place(x=10, y=380)
 
 #! ACİL DURUM RTL BUTONU
-def emergency_rtl():
-    change_mode('RTL')
 
 emergency_rtl_button_image = tk.PhotoImage(file="images/pad.png")
 emergency_rtl_button = tk.Button(image=emergency_rtl_button_image, command=emergency_rtl, bg='red')
@@ -570,18 +632,59 @@ def apply_mode():
     selected_mode = modes_dropbox.get()    
     change_mode(selected_mode)
 mode_change_button = tk.Button(text='Change Mode', fg='white', bg="#494949", bd=5, relief='ridge', command=apply_mode)
-mode_change_button.place(x=220, y=380)
+mode_change_button.place(x=360, y=380)
 
 #! ARM KISMI
-def arm_vehicle():
-    if vehicle.armed == False:
-        vehicle.armed = True
-    elif vehicle.armed == True:
-        vehicle.armed = False
         
 
 arm_button = tk.Button(text='ARM VEHICLE', fg='white', bg='red', bd=5, relief='ridge', command=arm_vehicle)
 arm_button.place(x=10, y=430)
+
+#! YÜKSEKLİK DEĞİŞTİRME
+
+height_title = tk.Label(root, text="CHANGE ALTITUDE", bg='#2e2e2e', fg='white')
+height_title.place(x=300, y=430)
+height_entry = tk.Entry(root, validate="key", validatecommand=vcmd, font='Helvetica 16', width=10)
+height_entry.place(x=300, y=450)
+def button_action():
+    change_alt(int(height_entry.get()))
+    if int(height_entry.get()) <= 119:
+        change_button.config(bg='green')
+        height_title.config(text='CHANGE ALTITUDE', fg='white')
+        height_entry.config(bg='white')
+    elif int(height_entry.get()) >= 120 and int(height_entry.get()) <=200:
+        change_button.config(bg='orange')
+        height_title.config(text='CHANGE ALTITUDE', fg='orange')
+        height_entry.config(bg='orange')
+    elif int(height_entry.get()) >= 201:
+        change_button.config(bg='red')
+        height_title.config(text='CHANGE ALTITUDE', fg='red')
+        height_entry.config(bg='red')
+change_button = tk.Button(root, text='CHANGE', font='Helvetica 11', command=button_action, bg='green', fg='white')
+change_button.place(x=440, y=450)
+
+#! HIZ DEĞİŞTİRME
+speed_title = tk.Label(root, text="CHANGE AIRSPEED", bg='#2e2e2e', fg='white')
+speed_title.place(x=300, y=530)
+speed_entry = tk.Entry(root, validate="key", validatecommand=vcmd, font='Helvetica 16', width=10)
+speed_entry.place(x=300, y=550)
+def button_action():
+    change_airspeed(int(speed_entry.get()))
+    if int(speed_entry.get()) <= 19:
+        changespeed_button.config(bg='green')
+        speed_title.config(text='CHANGE AIRSPEED', fg='white')
+        speed_entry.config(bg='white')
+    elif int(speed_entry.get()) >= 20 and int(height_entry.get()) <=40:
+        changespeed_button.config(bg='orange')
+        speed_title.config(text='CHANGE AIRSPEED', fg='orange')
+        speed_entry.config(bg='orange')
+    elif int(speed_entry.get()) >= 40:
+        changespeed_button.config(bg='red')
+        speed_title.config(text='CHANGE AIRSPEED', fg='red')
+        speed_entry.config(bg='red')
+changespeed_button = tk.Button(root, text='CHANGE', font='Helvetica 11', command=button_action, bg='green', fg='white')
+changespeed_button.place(x=440, y=550)
+
 
 #! KALİBRASYONLAR
 calibrate_level_button = tk.Button(text='Calibrate LEVEL', fg='white', bg='green', bd=5, command=level_horizon)
@@ -591,7 +694,7 @@ calibrate_level_button.place(x=10, y=480)
 
 # maploop Toplevel oluştur
 maploop = tk.Toplevel(root)
-maploop.geometry("800x600")
+maploop.geometry("1100x900")
 maploop.title('MAP')
 
 map_widget = TkinterMapView(maploop, width=800, height=600, corner_radius=0)
@@ -619,24 +722,60 @@ marker = map_widget.set_marker(
     text="Vehicle",
     icon=marker_img
 )
+homepoint_img_open = Image.open('images/home.png')
+homepoint_img = ImageTk.PhotoImage(homepoint_img_open)
+homepoint = map_widget.set_marker(
+    vehicle.home_location.lat, vehicle.home_location.lon,
+    text="Home",
+    icon=homepoint_img
+)
 rotated_img = plane_img.rotate(-yaw, expand=True)
 marker_img = ImageTk.PhotoImage(rotated_img)
 
+# Tıklama ile konum görme
+def on_map_click(coords):
+    lat, lon = coords  # tuple (latitude, longitude)
+    print(f"Tıklanan konum: Enlem = {lat}, Boylam = {lon}")
+
+def goto_click(coords):
+    lat, lon = coords
+    vmode = vehicle.mode.name
+    valt = vehicle.location.global_relative_frame.alt
+    if vmode == 'GUIDED':
+        target_point = LocationGlobalRelative(lat,lon,valt)
+        print('Hedefe gidiliyor...')
+        vehicle.simple_goto(target_point)
+    else:
+        print('GUIDED mod olmadan manuel bir şekilde bir konuma gidilemez!')
+
+#! Ev noktasını güncelleme
+def set_home(coords):
+    lat, lon = coords
+    new_home = LocationGlobal(lat, lon, 0)
+    vehicle.home_location = new_home
+    print('Home konumu güncellendi!')
 
 # Haritayı marker ile merkezle
 map_widget.set_position(lat, lon)
-
+map_widget.add_right_click_menu_command(label='Buraya Git...', command=goto_click, pass_coords=True)
+map_widget.add_right_click_menu_command(label='Ev noktası yap', command=set_home, pass_coords=True)
 def gui_update_map():
-    global marker, marker_img, lat, lon, yaw, plane_img
+    global marker, marker_img, lat, lon, yaw, plane_img, homepoint, homepoint_img
 
     try:
         marker.delete()
+        homepoint.delete()
 
         marker = map_widget.set_marker(
             lat, lon,
             text="Vehicle",
             icon=marker_img
 )
+        homepoint = map_widget.set_marker(
+            vehicle.home_location.lat, vehicle.home_location.lon,
+            text="Home",
+            icon=homepoint_img
+        )
 
 
         if 'lat' in globals() and 'lon' in globals() and 'yaw' in globals():
@@ -647,6 +786,9 @@ def gui_update_map():
             
 
             marker.set_position(lat, lon)
+            homepoint.set_position(vehicle.home_location.lat, vehicle.home_location.lon)
+            map_widget.add_left_click_map_command(on_map_click)
+            
 
     except Exception as e:
         print("Map update error:", e)

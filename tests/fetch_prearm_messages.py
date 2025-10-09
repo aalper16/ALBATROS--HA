@@ -12,9 +12,10 @@ def statustext_listener(self, name, message):
     # Sadece prearm ile ilgili olanları filtrele
     if "PreArm" in text or "prearm" in text:
         print(f"[PREARM UYARISI] {text}")
+        print(severity)
     else:
         # Diğer sistem mesajlarını da görmek istersen:
-        # print(f"[{severity}] {text}")
+        print(f"[{severity}] {text}")
         pass
 
 # Listener ekle
