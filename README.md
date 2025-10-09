@@ -31,3 +31,16 @@
 1. Depoyu klonlayın:
    ```bash
    git clone https://github.com/aalper16/UHAL-IHA-TAKIMLARI-ARAYUZU.git
+   
+2. Uygulama dizinine geçin:
+   ```bash
+   cd UHAL-IHA-TAKIMLARI-ARAYUZU
+
+3. Gerekli kütüphaneleri yükleyin:
+      ```bash
+   pip install -r requirements.txt
+      
+4. Uygulamayı başlatın:
+   ```bash
+   python3 run.py
+   
