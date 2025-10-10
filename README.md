@@ -55,5 +55,3 @@
 7. Uygulamayı başlatın:
    ```bash
    python3 run.py
-
-   
