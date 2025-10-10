@@ -28,19 +28,32 @@
 
 ### Adımlar
 
-1. Depoyu klonlayın:
+1. Sanal ortam kurun:
+     ```bash
+   sudo apt install python3 python3-venv
+
+2. Sanal ortam oluşturun:
+     ```bash
+   python3 -m venv venv
+
+3. Sanal ortamı aktive edin:
+   ```bash
+   source venv/bin/activate & cd venv
+
+4. Depoyu klonlayın:
    ```bash
    git clone https://github.com/aalper16/UHAL-IHA-TAKIMLARI-ARAYUZU.git
    
-2. Uygulama dizinine geçin:
+5. Uygulama dizinine geçin:
    ```bash
    cd UHAL-IHA-TAKIMLARI-ARAYUZU
 
-3. Gerekli kütüphaneleri yükleyin:
+6. Gerekli kütüphaneleri yükleyin:
       ```bash
    pip install -r requirements.txt
       
-4. Uygulamayı başlatın:
+7. Uygulamayı başlatın:
    ```bash
    python3 run.py
+
    
