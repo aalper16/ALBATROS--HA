@@ -751,7 +751,7 @@ def goto_click(coords):
 #! Ev noktasını güncelleme
 def set_home(coords):
     lat, lon = coords
-    new_home = LocationGlobal(lat, lon, 0)
+    new_home = LocationGlobal(lat, lon, vehicle.home_location.alt)
     vehicle.home_location = new_home
     print('Home konumu güncellendi!')
 
