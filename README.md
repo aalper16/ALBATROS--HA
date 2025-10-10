@@ -38,7 +38,7 @@
 
 3. Sanal ortamı aktive edin:
    ```bash
-   source venv/bin/activate & cd venv
+   source venv/bin/activate
 
 4. Depoyu klonlayın:
    ```bash
